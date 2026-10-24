@@ -1,8 +1,11 @@
 import { ACTIVE, BUDGET, DEADLINE, GATES, newRun, wakeTime, timeText, enter,
   restoreCheckpoint, setFreeze, roadConnected, busAligned, scanAligned, gaps, clamp, move, tick } from './mechanics.mjs';
+import { campusMapMarkup, pixelClock } from './pixel-art.mjs';
 
 const $ = id => document.getElementById(id);
 const app = $('campusApp');
+$('campusMap').innerHTML = campusMapMarkup();
+$('campusMap').style.setProperty('--route-length', Math.ceil($('campusMap').querySelector('.route-progress').getTotalLength()));
 const roadMarkup = $('stage').innerHTML;
 let s = newRun(), view = '', scale = 1, drag = null, last = 0;
 let keyHeld = false, buttonHeld = false, locked = false, muted = true, audio;
@@ -33,10 +36,14 @@ function resize() {
   if (w) { scale = w / 900; $('stage').style.transform = `scale(${scale})`; $('stageWrap').style.height = `${440 * scale}px`; }
 }
 new ResizeObserver(resize).observe($('stageWrap'));
+new ResizeObserver(() => {
+  const width = $('campusMap').getBoundingClientRect().width;
+  if (width) $('campusMap').style.setProperty('--map-scale', width / 1100);
+}).observe($('campusMap'));
 function updateClock() {
   const value = timeText(s.seconds);
   if (value !== lastClock) {
-    $('clock').innerHTML = `${value}<small>${s.mode === 'sleep' ? '预计明早醒来 · 08:00 上课' : '08:00 上课 · 别迟到'}</small>`;
+    $('clock').innerHTML = `${pixelClock(value)}<small>${s.mode === 'sleep' ? '预计明早醒来 · 08:00 上课' : '08:00 上课 · 别迟到'}</small>`;
     lastClock = value;
   }
   $('clock').classList.toggle('urgent', s.seconds >= 28680);
@@ -157,6 +164,7 @@ function renderMode(force = false) {
 function actorAt(x, y, running = true) {
   const a = $('actor'); if (!a) return;
   a.style.left = `${x}px`; a.style.top = `${y}px`;
+  a.style.animationPlayState = running && !s.frozen ? 'running' : 'paused';
   for (const leg of a.querySelectorAll('.leg')) leg.style.animationPlayState = running && !s.frozen ? 'running' : 'paused';
 }
 function updateStage() {
